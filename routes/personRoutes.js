@@ -92,5 +92,5 @@ router.delete('/:id' ,async(req,res)=>{
   }
 })
 
-//export 
+//module export 
   module.exports = router ;
