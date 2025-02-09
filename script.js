@@ -37,7 +37,7 @@ app.use(logRequest)
 //IMPORT person router file 
 const personRoutes = require('./routes/personRoutes');
 //use routers
-app.use('/person',localAuthMiddleware,personRoutes) ;
+app.use('/person',personRoutes) ;
 
 //IMPORT menuitem router file 
 const MenuItemRoutes = require('./routes/menuitemRoutes');

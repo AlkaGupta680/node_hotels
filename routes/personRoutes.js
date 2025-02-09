@@ -1,18 +1,28 @@
 const express=require('express') ;
 const router = express.Router();
 const person = require('./../models/person');
+const {jwtMiddleware,generateToken}= require('./../jwt')
 
 // below are end points and API are PUT,GET,POST,DELETE(CRUD)
+
 // POST METHOD route to add person
-router.post('/' , async(req,res)=>{
+router.post('/signup' , async(req,res)=>{
     try {
      const data = req.body ;
        //create a new person document using mongoose model 
      const newPerson = new person(data) ;
      //save new person to database 
      const response = await newPerson.save() ;
-     console.log("data saved") ;
-     res.status(200).json(response) ;
+     console.log("data saved") ; 
+       //payload 
+       const payload = {
+        id:response.id ,
+        username: response.username
+       }
+       console.log(JSON.stringify(payload)) ;
+       const token = generateToken(payload) ;
+       console.log('Token saved is : ' , token)
+     res.status(200).json({response:response , token : token}) ;
     } 
     catch (err) {
       console.log(err) ;
@@ -21,8 +31,8 @@ router.post('/' , async(req,res)=>{
  })
 
 
- //GET METHOD
-  router.get('/' , async(req,res)=>{
+ //GET METHOD to get person **something error here it is not runnig when given token to this
+  router.get('/' ,jwtMiddleware, async(req,res)=>{
    try {
       const data = await person.find() ;
       console.log("data fetched sucessfuly") ;
@@ -33,7 +43,46 @@ router.post('/' , async(req,res)=>{
    }
   })
 
+//login route  error here 
+router.post('/login' ,async(req,res)=>{
+  try {
+    //extract username and password 
+    const{username,password} = req.body ;
+    //find user 
+    const user = await person.findOne({username:username}) ;
+    //if user do not exit or password is incorrect 
+    if(!user || !(await user.comparePassword(password))){
+      return res.status(401).json({error:'Invalid username or password'})
+    }
+    //generate token 
+    const payload ={
+      id:user.id ,
+      username:user.username 
+    }
+    const token = generateToken(payload)
+    //return token as response 
+    res.json({token})
+  } catch (err) {
+    console.log(err) ;
+    res.status(500).json({error:'internal serval error'})
+  }
+}) ; 
 
+//profile route 
+router.get('/profile',jwtMiddleware , async(req,res)=>{
+   try {
+     const userData = req.user ;
+     console.log("user data :" , userData) 
+     const userId = userData.id ;
+     const  user =  await person.findById(userId) ;
+
+     res.status(200).json({user}) ;
+
+   } catch (err) {
+    console.log(err) ;
+    res.status(500).json({error:'internal serval error'})
+   }
+})
 
   // parameterised API FOR PERSON DATABASE
 router.get('/:workType' , async(req,res)=>{
