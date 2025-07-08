@@ -40,4 +40,16 @@ export const menuAPI = {
   createMenuItem: (data) => api.post('/MenuItem', data),
 };
 
+// Booking API calls
+export const bookingAPI = {
+  createBooking: (data) => api.post('/booking', data),
+  getAllBookings: () => api.get('/booking'),
+  getMyBookings: () => api.get('/booking/my-bookings'),
+  getGuestBookings: (email) => api.get(`/booking/guest/${email}`),
+  updateBookingStatus: (id, status) => api.put(`/booking/${id}/status`, { status }),
+  updatePaymentStatus: (id, paymentStatus, paymentMethod) => api.put(`/booking/${id}/payment`, { paymentStatus, paymentMethod }),
+  cancelBooking: (id) => api.delete(`/booking/${id}`),
+  getAvailableTables: (date, time) => api.get(`/booking/available-tables?date=${date}&time=${time}`)
+};
+
 export default api;

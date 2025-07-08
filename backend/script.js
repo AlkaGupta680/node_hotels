@@ -46,6 +46,11 @@ const MenuItemRoutes = require('./routes/menuitemRoutes');
 //use routers
 app.use('/MenuItem' ,MenuItemRoutes) ;
 
+//IMPORT booking router file 
+const BookingRoutes = require('./routes/bookingRoutes');
+//use routers
+app.use('/booking', BookingRoutes);
+
 app.listen(PORT , ()=>{
     console.log("server is listening on port 3000")
 })
