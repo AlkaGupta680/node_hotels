@@ -6,7 +6,7 @@ const Dashboard = ({ onLogout }) => {
   const [persons, setPersons] = useState([]);
   const [menuItems, setMenuItems] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState('profile');
+  const [activeTab, setActiveTab] = useState('home');
 
   useEffect(() => {
     fetchUserProfile();
@@ -66,6 +66,40 @@ const Dashboard = ({ onLogout }) => {
     }
   };
 
+  const featuredDishes = [
+    {
+      name: "Grilled Salmon",
+      image: "https://images.pexels.com/photos/1199957/pexels-photo-1199957.jpeg?auto=compress&cs=tinysrgb&w=400",
+      price: "$28",
+      description: "Fresh Atlantic salmon with herbs"
+    },
+    {
+      name: "Pasta Carbonara",
+      image: "https://images.pexels.com/photos/1279330/pexels-photo-1279330.jpeg?auto=compress&cs=tinysrgb&w=400",
+      price: "$22",
+      description: "Classic Italian pasta with cream sauce"
+    },
+    {
+      name: "Beef Steak",
+      image: "https://images.pexels.com/photos/361184/asparagus-steak-veal-steak-veal-361184.jpeg?auto=compress&cs=tinysrgb&w=400",
+      price: "$35",
+      description: "Premium cut with seasonal vegetables"
+    },
+    {
+      name: "Caesar Salad",
+      image: "https://images.pexels.com/photos/2097090/pexels-photo-2097090.jpeg?auto=compress&cs=tinysrgb&w=400",
+      price: "$16",
+      description: "Fresh romaine with parmesan and croutons"
+    }
+  ];
+
+  const stats = [
+    { label: "Total Staff", value: persons.length, icon: "👥", color: "from-blue-500 to-blue-600" },
+    { label: "Menu Items", value: menuItems.length, icon: "🍽️", color: "from-green-500 to-green-600" },
+    { label: "Chefs", value: persons.filter(p => p.work === 'chef').length, icon: "👨‍🍳", color: "from-orange-500 to-orange-600" },
+    { label: "Waiters", value: persons.filter(p => p.work === 'waiter').length, icon: "🍽️", color: "from-purple-500 to-purple-600" }
+  ];
+
   if (loading) {
     return (
       <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-50 via-indigo-50 to-purple-50">
@@ -116,6 +150,7 @@ const Dashboard = ({ onLogout }) => {
           <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 mb-6">
             <nav className="flex space-x-8 px-6">
               {[
+                { id: 'home', name: 'Home', icon: '🏠' },
                 { id: 'profile', name: 'Profile', icon: '👤' },
                 { id: 'staff', name: 'Staff', icon: '👥' },
                 { id: 'menu', name: 'Menu', icon: '🍽️' }
@@ -138,6 +173,146 @@ const Dashboard = ({ onLogout }) => {
 
           {/* Tab Content */}
           <div className="space-y-6">
+            {activeTab === 'home' && (
+              <div className="space-y-8">
+                {/* Welcome Hero Section */}
+                <div className="bg-gradient-to-r from-indigo-600 via-purple-600 to-pink-600 rounded-3xl shadow-2xl overflow-hidden">
+                  <div className="relative px-8 py-12">
+                    <div className="absolute inset-0 bg-black/20"></div>
+                    <div className="relative z-10 text-center text-white">
+                      <div className="flex justify-center mb-6">
+                        <div className="h-20 w-20 bg-white/20 backdrop-blur-lg rounded-full flex items-center justify-center">
+                          <span className="text-4xl">👨‍🍳</span>
+                        </div>
+                      </div>
+                      <h1 className="text-4xl font-bold mb-4">Welcome to Grand Hotel</h1>
+                      <p className="text-xl text-indigo-100 mb-8">Experience culinary excellence and exceptional service</p>
+                      <div className="flex justify-center space-x-6">
+                        <div className="text-center">
+                          <div className="text-3xl font-bold">{persons.length}</div>
+                          <div className="text-indigo-200">Staff Members</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-3xl font-bold">{menuItems.length}</div>
+                          <div className="text-indigo-200">Menu Items</div>
+                        </div>
+                        <div className="text-center">
+                          <div className="text-3xl font-bold">5★</div>
+                          <div className="text-indigo-200">Rating</div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+
+                {/* Stats Cards */}
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                  {stats.map((stat, index) => (
+                    <div key={index} className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 p-6 hover:shadow-xl transition-all duration-200 transform hover:scale-105">
+                      <div className="flex items-center justify-between">
+                        <div>
+                          <p className="text-sm font-medium text-gray-600">{stat.label}</p>
+                          <p className="text-3xl font-bold text-gray-900">{stat.value}</p>
+                        </div>
+                        <div className={`h-12 w-12 bg-gradient-to-r ${stat.color} rounded-xl flex items-center justify-center text-white text-2xl shadow-lg`}>
+                          {stat.icon}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+
+                {/* Featured Dishes */}
+                <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 p-8">
+                  <div className="flex items-center justify-between mb-8">
+                    <div>
+                      <h2 className="text-2xl font-bold text-gray-900">Featured Dishes</h2>
+                      <p className="text-gray-600">Our chef's special recommendations</p>
+                    </div>
+                    <div className="h-12 w-12 bg-gradient-to-r from-orange-400 to-red-500 rounded-xl flex items-center justify-center text-white text-2xl shadow-lg">
+                      🍽️
+                    </div>
+                  </div>
+                  <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
+                    {featuredDishes.map((dish, index) => (
+                      <div key={index} className="group cursor-pointer">
+                        <div className="bg-white rounded-2xl shadow-lg overflow-hidden hover:shadow-xl transition-all duration-300 transform group-hover:scale-105">
+                          <div className="relative h-48 overflow-hidden">
+                            <img 
+                              src={dish.image} 
+                              alt={dish.name}
+                              className="w-full h-full object-cover group-hover:scale-110 transition-transform duration-300"
+                            />
+                            <div className="absolute top-4 right-4 bg-white/90 backdrop-blur-sm rounded-full px-3 py-1">
+                              <span className="text-sm font-bold text-gray-900">{dish.price}</span>
+                            </div>
+                          </div>
+                          <div className="p-4">
+                            <h3 className="text-lg font-semibold text-gray-900 mb-2">{dish.name}</h3>
+                            <p className="text-gray-600 text-sm">{dish.description}</p>
+                          </div>
+                        </div>
+                      </div>
+                    ))}
+                  </div>
+                </div>
+
+                {/* Chef Spotlight */}
+                <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
+                  <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 p-8">
+                    <div className="flex items-center space-x-4 mb-6">
+                      <div className="h-16 w-16 bg-gradient-to-r from-yellow-400 to-orange-500 rounded-2xl flex items-center justify-center text-white text-3xl shadow-lg">
+                        👨‍🍳
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-900">Our Master Chefs</h3>
+                        <p className="text-gray-600">Culinary artists creating magic</p>
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      {persons.filter(p => p.work === 'chef').slice(0, 3).map((chef, index) => (
+                        <div key={index} className="flex items-center space-x-3 p-3 bg-gray-50 rounded-xl hover:bg-gray-100 transition-colors duration-200">
+                          <div className="h-10 w-10 bg-gradient-to-r from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white font-bold">
+                            {chef.name?.charAt(0)?.toUpperCase()}
+                          </div>
+                          <div>
+                            <div className="font-medium text-gray-900">{chef.name}</div>
+                            <div className="text-sm text-gray-600">Executive Chef</div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  </div>
+
+                  <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 p-8">
+                    <div className="flex items-center space-x-4 mb-6">
+                      <div className="h-16 w-16 bg-gradient-to-r from-green-400 to-blue-500 rounded-2xl flex items-center justify-center text-white text-3xl shadow-lg">
+                        📊
+                      </div>
+                      <div>
+                        <h3 className="text-xl font-bold text-gray-900">Today's Highlights</h3>
+                        <p className="text-gray-600">Restaurant performance</p>
+                      </div>
+                    </div>
+                    <div className="space-y-4">
+                      <div className="flex justify-between items-center p-3 bg-green-50 rounded-xl">
+                        <span className="text-green-800 font-medium">Orders Completed</span>
+                        <span className="text-2xl font-bold text-green-600">127</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-blue-50 rounded-xl">
+                        <span className="text-blue-800 font-medium">Customer Satisfaction</span>
+                        <span className="text-2xl font-bold text-blue-600">98%</span>
+                      </div>
+                      <div className="flex justify-between items-center p-3 bg-purple-50 rounded-xl">
+                        <span className="text-purple-800 font-medium">Revenue Today</span>
+                        <span className="text-2xl font-bold text-purple-600">$3,240</span>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            )}
+
             {activeTab === 'profile' && user && (
               <div className="bg-white/80 backdrop-blur-lg shadow-xl rounded-2xl border border-white/20 overflow-hidden">
                 <div className="bg-gradient-to-r from-indigo-500 to-purple-600 px-6 py-8">
