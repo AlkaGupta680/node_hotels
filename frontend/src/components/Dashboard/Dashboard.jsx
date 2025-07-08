@@ -1,18 +1,26 @@
 import { useState, useEffect } from 'react';
-import { authAPI, personAPI, menuAPI } from '../../services/api';
+import { authAPI, personAPI, menuAPI, bookingAPI } from '../../services/api';
 
 const Dashboard = ({ onLogout }) => {
   const [user, setUser] = useState(null);
   const [persons, setPersons] = useState([]);
   const [menuItems, setMenuItems] = useState([]);
+  const [bookings, setBookings] = useState([]);
   const [loading, setLoading] = useState(true);
   const [activeTab, setActiveTab] = useState('home');
 
   useEffect(() => {
     fetchUserProfile();
-    fetchPersons();
     fetchMenuItems();
+    fetchBookings();
   }, []);
+
+  useEffect(() => {
+    // Only fetch persons if user is staff/manager
+    if (user && (user.work === 'manager' || user.work === 'chef' || user.work === 'waiter')) {
+      fetchPersons();
+    }
+  }, [user]);
 
   const fetchUserProfile = async () => {
     try {
@@ -36,9 +44,25 @@ const Dashboard = ({ onLogout }) => {
     try {
       const response = await menuAPI.getAllMenuItems();
       setMenuItems(response.data);
-      setLoading(false);
     } catch (error) {
       console.error('Error fetching menu items:', error);
+    }
+  };
+
+  const fetchBookings = async () => {
+    try {
+      if (user && (user.work === 'manager' || user.work === 'chef' || user.work === 'waiter')) {
+        // Staff can see all bookings
+        const response = await bookingAPI.getAllBookings();
+        setBookings(response.data);
+      } else {
+        // Regular users see only their bookings
+        const response = await bookingAPI.getMyBookings();
+        setBookings(response.data);
+      }
+      setLoading(false);
+    } catch (error) {
+      console.error('Error fetching bookings:', error);
       setLoading(false);
     }
   };
@@ -65,6 +89,8 @@ const Dashboard = ({ onLogout }) => {
       default: return '🍽️';
     }
   };
+
+  const isStaff = user && (user.work === 'manager' || user.work === 'chef' || user.work === 'waiter');
 
   const featuredDishes = [
     {
@@ -152,8 +178,13 @@ const Dashboard = ({ onLogout }) => {
               {[
                 { id: 'home', name: 'Home', icon: '🏠' },
                 { id: 'profile', name: 'Profile', icon: '👤' },
-                { id: 'staff', name: 'Staff', icon: '👥' },
-                { id: 'menu', name: 'Menu', icon: '🍽️' }
+                { id: 'bookings', name: 'My Bookings', icon: '📅' },
+                { id: 'book-table', name: 'Book Table', icon: '🍽️' },
+                ...(isStaff ? [
+                  { id: 'staff', name: 'Staff', icon: '👥' },
+                  { id: 'menu', name: 'Menu', icon: '🍽️' },
+                  { id: 'all-bookings', name: 'All Bookings', icon: '📋' }
+                ] : [])
               ].map((tab) => (
                 <button
                   key={tab.id}
@@ -352,6 +383,154 @@ const Dashboard = ({ onLogout }) => {
               </div>
             )}
 
+            {activeTab === 'bookings' && (
+              <div className="space-y-6">
+                <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 p-6">
+                  <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-3">
+                    <span className="text-3xl">📅</span>
+                    <span>My Bookings</span>
+                  </h2>
+                  {bookings.length === 0 ? (
+                    <div className="text-center py-12">
+                      <div className="text-6xl mb-4">🍽️</div>
+                      <h3 className="text-xl font-semibold text-gray-900 mb-2">No bookings yet</h3>
+                      <p className="text-gray-600 mb-6">Start by booking your first table!</p>
+                      <button
+                        onClick={() => setActiveTab('book-table')}
+                        className="bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white px-6 py-3 rounded-xl font-semibold transition-all duration-200 transform hover:scale-105"
+                      >
+                        Book a Table
+                      </button>
+                    </div>
+                  ) : (
+                    <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+                      {bookings.map((booking) => (
+                        <div key={booking._id} className="bg-white rounded-2xl shadow-lg border border-gray-200 p-6 hover:shadow-xl transition-all duration-200">
+                          <div className="flex items-center justify-between mb-4">
+                            <div className="flex items-center space-x-2">
+                              <span className="text-2xl">🍽️</span>
+                              <span className="font-semibold text-gray-900">Table {booking.tableNumber}</span>
+                            </div>
+                            <span className={`px-3 py-1 rounded-full text-xs font-medium ${
+                              booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                              booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                              booking.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {booking.status.charAt(0).toUpperCase() + booking.status.slice(1)}
+                            </span>
+                          </div>
+                          <div className="space-y-2 text-sm">
+                            <div className="flex items-center space-x-2">
+                              <span>📅</span>
+                              <span>{new Date(booking.bookingDate).toLocaleDateString()}</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <span>⏰</span>
+                              <span>{booking.bookingTime}</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <span>👥</span>
+                              <span>{booking.numberOfGuests} guests</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <span>💰</span>
+                              <span>${booking.totalAmount}</span>
+                            </div>
+                            <div className="flex items-center space-x-2">
+                              <span>💳</span>
+                              <span className={`px-2 py-1 rounded text-xs ${
+                                booking.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' :
+                                booking.paymentStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                                'bg-red-100 text-red-800'
+                              }`}>
+                                {booking.paymentStatus.charAt(0).toUpperCase() + booking.paymentStatus.slice(1)}
+                              </span>
+                            </div>
+                          </div>
+                        </div>
+                      ))}
+                    </div>
+                  )}
+                </div>
+              </div>
+            )}
+
+            {activeTab === 'book-table' && (
+              <BookTableForm onBookingSuccess={() => {
+                fetchBookings();
+                setActiveTab('bookings');
+              }} />
+            )}
+
+            {activeTab === 'all-bookings' && isStaff && (
+              <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 p-6">
+                <h2 className="text-2xl font-bold text-gray-900 mb-6 flex items-center space-x-3">
+                  <span className="text-3xl">📋</span>
+                  <span>All Bookings</span>
+                </h2>
+                <div className="overflow-x-auto">
+                  <table className="min-w-full divide-y divide-gray-200">
+                    <thead className="bg-gray-50">
+                      <tr>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Customer</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Table</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Date & Time</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Guests</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Status</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Payment</th>
+                        <th className="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">Amount</th>
+                      </tr>
+                    </thead>
+                    <tbody className="bg-white divide-y divide-gray-200">
+                      {bookings.map((booking) => (
+                        <tr key={booking._id} className="hover:bg-gray-50">
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div>
+                              <div className="text-sm font-medium text-gray-900">{booking.customerName}</div>
+                              <div className="text-sm text-gray-500">{booking.customerEmail}</div>
+                            </div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            Table {booking.tableNumber}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <div className="text-sm text-gray-900">{new Date(booking.bookingDate).toLocaleDateString()}</div>
+                            <div className="text-sm text-gray-500">{booking.bookingTime}</div>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            {booking.numberOfGuests}
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                              booking.status === 'confirmed' ? 'bg-green-100 text-green-800' :
+                              booking.status === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                              booking.status === 'cancelled' ? 'bg-red-100 text-red-800' :
+                              'bg-gray-100 text-gray-800'
+                            }`}>
+                              {booking.status}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap">
+                            <span className={`px-2 py-1 inline-flex text-xs leading-5 font-semibold rounded-full ${
+                              booking.paymentStatus === 'paid' ? 'bg-green-100 text-green-800' :
+                              booking.paymentStatus === 'pending' ? 'bg-yellow-100 text-yellow-800' :
+                              'bg-red-100 text-red-800'
+                            }`}>
+                              {booking.paymentStatus}
+                            </span>
+                          </td>
+                          <td className="px-6 py-4 whitespace-nowrap text-sm text-gray-900">
+                            ${booking.totalAmount}
+                          </td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+              </div>
+            )}
+
             {activeTab === 'staff' && (
               <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
                 {persons.map((person) => (
@@ -443,6 +622,265 @@ const Dashboard = ({ onLogout }) => {
           </div>
         </div>
       </div>
+    </div>
+  );
+};
+
+// Book Table Form Component
+const BookTableForm = ({ onBookingSuccess }) => {
+  const [formData, setFormData] = useState({
+    customerName: '',
+    customerEmail: '',
+    customerPhone: '',
+    tableNumber: '',
+    numberOfGuests: 2,
+    bookingDate: '',
+    bookingTime: '',
+    specialRequests: '',
+    totalAmount: 50 // Base booking fee
+  });
+  const [availableTables, setAvailableTables] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState('');
+  const [success, setSuccess] = useState('');
+
+  const timeSlots = [
+    '11:00', '11:30', '12:00', '12:30', '13:00', '13:30',
+    '14:00', '14:30', '15:00', '15:30', '16:00', '16:30',
+    '17:00', '17:30', '18:00', '18:30', '19:00', '19:30',
+    '20:00', '20:30', '21:00', '21:30', '22:00'
+  ];
+
+  const handleChange = (e) => {
+    const { name, value } = e.target;
+    setFormData(prev => ({
+      ...prev,
+      [name]: value
+    }));
+
+    // Calculate total amount based on number of guests
+    if (name === 'numberOfGuests') {
+      setFormData(prev => ({
+        ...prev,
+        totalAmount: Math.max(50, parseInt(value) * 25) // $25 per person, minimum $50
+      }));
+    }
+  };
+
+  const checkAvailability = async () => {
+    if (formData.bookingDate && formData.bookingTime) {
+      try {
+        const response = await bookingAPI.getAvailableTables(formData.bookingDate, formData.bookingTime);
+        setAvailableTables(response.data.availableTables);
+      } catch (error) {
+        console.error('Error checking availability:', error);
+      }
+    }
+  };
+
+  useEffect(() => {
+    checkAvailability();
+  }, [formData.bookingDate, formData.bookingTime]);
+
+  const handleSubmit = async (e) => {
+    e.preventDefault();
+    setLoading(true);
+    setError('');
+    setSuccess('');
+
+    try {
+      await bookingAPI.createBooking(formData);
+      setSuccess('Table booked successfully! You will receive a confirmation email shortly.');
+      setTimeout(() => {
+        onBookingSuccess();
+      }, 2000);
+    } catch (err) {
+      setError(err.response?.data?.error || 'Booking failed. Please try again.');
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="bg-white/80 backdrop-blur-lg rounded-2xl shadow-lg border border-white/20 p-8">
+      <div className="text-center mb-8">
+        <div className="text-6xl mb-4">🍽️</div>
+        <h2 className="text-3xl font-bold text-gray-900 mb-2">Reserve Your Table</h2>
+        <p className="text-gray-600">Book a table for an unforgettable dining experience</p>
+      </div>
+
+      <form onSubmit={handleSubmit} className="space-y-6">
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Full Name</label>
+            <input
+              type="text"
+              name="customerName"
+              required
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              placeholder="John Doe"
+              value={formData.customerName}
+              onChange={handleChange}
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Email</label>
+            <input
+              type="email"
+              name="customerEmail"
+              required
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              placeholder="john@example.com"
+              value={formData.customerEmail}
+              onChange={handleChange}
+            />
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Phone Number</label>
+            <input
+              type="tel"
+              name="customerPhone"
+              required
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              placeholder="+1 (555) 123-4567"
+              value={formData.customerPhone}
+              onChange={handleChange}
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Number of Guests</label>
+            <select
+              name="numberOfGuests"
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              value={formData.numberOfGuests}
+              onChange={handleChange}
+            >
+              {[1,2,3,4,5,6,7,8,9,10,11,12].map(num => (
+                <option key={num} value={num}>{num} {num === 1 ? 'Guest' : 'Guests'}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Date</label>
+            <input
+              type="date"
+              name="bookingDate"
+              required
+              min={new Date().toISOString().split('T')[0]}
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              value={formData.bookingDate}
+              onChange={handleChange}
+            />
+          </div>
+          
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Time</label>
+            <select
+              name="bookingTime"
+              required
+              className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+              value={formData.bookingTime}
+              onChange={handleChange}
+            >
+              <option value="">Select time</option>
+              {timeSlots.map(time => (
+                <option key={time} value={time}>{time}</option>
+              ))}
+            </select>
+          </div>
+        </div>
+
+        {availableTables.length > 0 && (
+          <div>
+            <label className="block text-sm font-medium text-gray-700 mb-2">Available Tables</label>
+            <div className="grid grid-cols-5 gap-3">
+              {availableTables.map(tableNum => (
+                <button
+                  key={tableNum}
+                  type="button"
+                  onClick={() => setFormData(prev => ({ ...prev, tableNumber: tableNum }))}
+                  className={`p-3 rounded-xl border-2 transition-all duration-200 ${
+                    formData.tableNumber === tableNum
+                      ? 'border-indigo-500 bg-indigo-50 text-indigo-700'
+                      : 'border-gray-300 hover:border-indigo-300 hover:bg-indigo-50'
+                  }`}
+                >
+                  Table {tableNum}
+                </button>
+              ))}
+            </div>
+          </div>
+        )}
+
+        <div>
+          <label className="block text-sm font-medium text-gray-700 mb-2">Special Requests (Optional)</label>
+          <textarea
+            name="specialRequests"
+            rows={3}
+            className="w-full px-4 py-3 border border-gray-300 rounded-xl focus:outline-none focus:ring-2 focus:ring-indigo-500 focus:border-transparent"
+            placeholder="Any special dietary requirements, celebration details, etc."
+            value={formData.specialRequests}
+            onChange={handleChange}
+          />
+        </div>
+
+        <div className="bg-gray-50 rounded-xl p-4">
+          <div className="flex justify-between items-center text-lg font-semibold">
+            <span>Total Amount:</span>
+            <span className="text-indigo-600">${formData.totalAmount}</span>
+          </div>
+          <p className="text-sm text-gray-600 mt-1">
+            Includes booking fee and service charge
+          </p>
+        </div>
+
+        {error && (
+          <div className="bg-red-50 border border-red-200 rounded-xl p-4 flex items-center space-x-3">
+            <svg className="h-5 w-5 text-red-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 8v4m0 4h.01M21 12a9 9 0 11-18 0 9 9 0 0118 0z" />
+            </svg>
+            <span className="text-red-700">{error}</span>
+          </div>
+        )}
+
+        {success && (
+          <div className="bg-green-50 border border-green-200 rounded-xl p-4 flex items-center space-x-3">
+            <svg className="h-5 w-5 text-green-500" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+              <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7" />
+            </svg>
+            <span className="text-green-700">{success}</span>
+          </div>
+        )}
+
+        <button
+          type="submit"
+          disabled={loading || !formData.tableNumber}
+          className="w-full bg-gradient-to-r from-indigo-500 to-purple-600 hover:from-indigo-600 hover:to-purple-700 text-white font-semibold py-4 px-6 rounded-xl transition-all duration-200 transform hover:scale-[1.02] hover:shadow-lg disabled:opacity-50 disabled:cursor-not-allowed disabled:transform-none flex items-center justify-center space-x-2"
+        >
+          {loading ? (
+            <>
+              <svg className="animate-spin h-5 w-5 text-white" fill="none" viewBox="0 0 24 24">
+                <circle className="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" strokeWidth="4"></circle>
+                <path className="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+              </svg>
+              <span>Processing...</span>
+            </>
+          ) : (
+            <>
+              <span>🍽️</span>
+              <span>Reserve Table - ${formData.totalAmount}</span>
+            </>
+          )}
+        </button>
+      </form>
     </div>
   );
 };
